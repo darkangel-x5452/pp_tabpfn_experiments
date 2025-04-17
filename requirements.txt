@@ -1,0 +1,15 @@
+numpy>=1,<2
+pandas
+pyarrow==14.0.1
+scikit-learn
+tqdm
+tabpfn
+python-dotenv==1.0.1
+catboost
+xgboost
+datasets
+ipython
+matplotlib
+hyperopt
+shap
+plotly
