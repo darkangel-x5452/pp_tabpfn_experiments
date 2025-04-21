@@ -8,6 +8,8 @@
 #
 # # Install example datasets
 # !pip install datasets
+import os
+
 import numpy as np
 
 from utils.advanced_classifier import AdvancedClassifier
@@ -18,7 +20,7 @@ from utils.unsupervised_class import Unsupervised
 def run_app():
 
     # https://colab.research.google.com/drive/1SHa43VuHASLjevzO7y3-wPCxHY18-2H6?usp=sharing#scrollTo=o03aOVAw0Etg
-    data_fp = r"C:\_databases\pp_lottery_v5_ml\saturday\gold\model_train_data.parquet"
+    data_fp = os.environ["DATA_FP"]
     # data_fp = r"openml"
     adv = AdvancedClassifier()
     X, y = get_data(data_type=data_fp)
@@ -35,7 +37,7 @@ def run_app():
     #     num_class=num_class
     # )
     # adv.save_model(model=model)
-    # model = adv.load_model()
+    model = adv.load_model()
 
     adv.compare_models(
         X=X,

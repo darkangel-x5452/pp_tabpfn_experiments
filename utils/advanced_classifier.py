@@ -45,7 +45,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import plotly.io as pio
 
-from utils.tools import downsampling
+from utils.tools import downsampling, get_cross_val_mean
 
 
 class AdvancedClassifier():
@@ -142,46 +142,35 @@ class AdvancedClassifier():
         y_down = le.fit_transform(y_down)
         y = le.fit_transform(y)
 
-        models1_down = [
-            ('TabPFN', TabPFNClassifier(random_state=42)),
+        models = [
+            'TabPFN',
+            'AutoTabPFN',
+            'RandomForest',
+            'XGBoost',
+            'CatBoost',
         ]
         print(f"{datetime.datetime.now()}, scoring 1 down")
-        scores1 = {
-            name: cross_val_score(model, X_down, y_down, cv=5, scoring=scoring, n_jobs=1, verbose=1).mean()
-            for name, model in models1_down
-        }
-        models1 = [
-            ('RandomForest', RandomForestClassifier(random_state=42)),
-            ('XGBoost', XGBClassifier(random_state=42, device="cuda", tree_method="hist")),
-            ('CatBoost', CatBoostClassifier(random_state=42, verbose=0, task_type='GPU', devices='0'))
-        ]
-        print(f"{datetime.datetime.now()},  1 normal")
-        scores1.update({
-            name: cross_val_score(model, X, y, cv=5, scoring=scoring, n_jobs=1, verbose=1).mean()
-            for name, model in models1
-        })
+
+        scores1 = {}
+        cv = 5
+        for name in models:
+            print(f"{datetime.datetime.now()}, {name}, {cv}")
+            if "TabPFN" in name:
+                got_mean = get_cross_val_mean(model_name=name, cv=cv, scoring=scoring, X=X_down, y=y_down)
+            else:
+                got_mean = get_cross_val_mean(model_name=name, cv=cv, scoring=scoring, X=X_down, y=y_down)
+            scores1.update({name: got_mean})
         df1 = pd.DataFrame(list(scores1.items()), columns=['Model', 'ROC AUC'])
 
-        models2 = [
-            ('TabPFN', TabPFNClassifier(random_state=42)),
-            ('AutoTabPFN', AutoTabPFNClassifier(max_time=30, device="cuda")),
-        ]
-        print(f"{datetime.datetime.now()},  2 down")
-        scores2 = {
-            name: cross_val_score(model, X_down, y_down, cv=3, scoring=scoring, n_jobs=1, verbose=1).mean()
-            for name, model in models2
-        }
-        models2 = [
-            ('RandomForest', RandomForestClassifier(random_state=42)),
-            ('XGBoost', XGBClassifier(random_state=42, device="cuda", tree_method="hist")),
-            ('CatBoost', CatBoostClassifier(random_state=42, verbose=0, task_type='GPU', devices='0'))
-        ]
-        print(f"{datetime.datetime.now()},  2 normal")
-        scores2.update({
-            name: cross_val_score(model, X, y, cv=3, scoring=scoring, n_jobs=1, verbose=1).mean()
-            for name, model in models2
-        })
-        print(f"{datetime.datetime.now()}, creating dataframe")
+        scores2= {}
+        cv = 3
+        for name in models:
+            print(f"{datetime.datetime.now()}, {name}, {cv}")
+            if "TabPFN" in name:
+                got_mean = get_cross_val_mean(model_name=name, cv=cv, scoring=scoring, X=X_down, y=y_down)
+            else:
+                got_mean = get_cross_val_mean(model_name=name, cv=cv, scoring=scoring, X=X_down, y=y_down)
+            scores2.update({name: got_mean})
         df2 = pd.DataFrame(list(scores2.items()), columns=['Model', 'ROC AUC'])
 
         print(f"{datetime.datetime.now()}, plotting data")

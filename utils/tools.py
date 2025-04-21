@@ -1,8 +1,17 @@
+import gc
+
 import pandas as pd
+import torch
 from IPython.core.display import Markdown
 from IPython.core.display_functions import display
+from catboost import CatBoostClassifier
 from sklearn.datasets import fetch_openml
-from sklearn.utils import Bunch
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import cross_val_score
+from tabpfn import TabPFNClassifier
+from xgboost import XGBClassifier
+
+from tabpfn_extensions.post_hoc_ensembles.sklearn_interface import AutoTabPFNClassifier
 
 
 def get_data(data_type: str) -> tuple[pd.DataFrame, pd.Series]:
@@ -83,3 +92,44 @@ def downsampling(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series]:
     y = downsampled_df["label"]
 
     return X, y
+
+
+def get_cross_val_mean(
+        model_name: str,
+        cv: int,
+        scoring: str,
+        X: pd.DataFrame,
+        y: pd.Series
+) -> float:
+    if model_name == 'TabPFN':
+        model = TabPFNClassifier(random_state=42)
+    elif model_name == 'RandomForest':
+        model = RandomForestClassifier(random_state=42)
+    elif model_name == 'XGBoost':
+        static_params = {
+            "objective": "binary:logistic",  # Binary classification
+            "tree_method": "hist",  # Use 'hist' or 'gpu_hist' for faster training
+            "device": "cuda",
+            "verbosity": 1,
+            "alpha": 0.5580846759653957,
+            "lambda": 1.6889274444889288,
+            "learning_rate": 0.6342486558587844,
+            "max_bin": int(295.0),
+            "max_depth": int(44.0),
+            "min_child_weight": int(10.0),
+            "scale_pos_weight": int(785.0),
+        }
+        model = XGBClassifier(random_state=42, **static_params)
+    elif model_name == 'CatBoost':
+        model = CatBoostClassifier(random_state=42, verbose=0, task_type='GPU', devices='0')
+    elif model_name == 'AutoTabPFN':
+        model = AutoTabPFNClassifier(max_time=30, device="cuda")
+    else:
+        raise ValueError("Invalid model type")
+    mean = cross_val_score(model, X, y, cv=cv, scoring=scoring, n_jobs=1, verbose=1).mean()
+
+    del model
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    return mean
